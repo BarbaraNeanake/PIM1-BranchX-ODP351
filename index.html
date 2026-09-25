@@ -318,7 +318,7 @@
 
   <!-- AREA UPLOAD -->
   <section class="no-print" id="sec-upload">
-    <div class="sec-head"><h2>Upload data keuangan klinik</h2><p class="desc">Gunakan file Excel sesuai template. Belum punya datanya? Coba dulu dengan data contoh.</p></div>
+    <div class="sec-head"><h2>Upload data keuangan klinik</h2><p class="desc">Gunakan file Excel sesuai template. Belum punya template? Unduh dulu lewat tombol Download Template Excel.</p></div>
     <div class="panel">
       <div class="upload-grid">
         <div>
@@ -339,7 +339,6 @@
           </ol>
           <div class="side-actions">
             <button class="primary" id="btnTemplate">Download Template Excel</button>
-            <button class="gold" id="btnContoh">Coba dengan Data Contoh</button>
           </div>
         </div>
       </div>
@@ -1071,7 +1070,7 @@ function prosesFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
-/* ---------- Template & data contoh ---------- */
+/* ---------- Template Excel ---------- */
 function buatWorkbook(profilIsi, barisBulanan) {
   const wb = XLSX.utils.book_new();
   const p = [["Field", "Isian", "Keterangan"], ...PROFIL_FIELDS.map(f => [f.label, profilIsi ? profilIsi[f.key] : "", "Contoh: " + f.contoh])];
@@ -1108,29 +1107,6 @@ function buatWorkbook(profilIsi, barisBulanan) {
   return wb;
 }
 
-function dataContoh() {
-  const profil = { nama: "Klinik Aura Estetika", lokasi: "Mall Kota Kasablanka", jenis: "Estetika", tahun: 2019, cabang: 2, karyawan: 18, gajian: 25,
-    bank: "Bank X", edc: "Tidak", qris: "Tidak", payroll: "Tidak", kopra: "Tidak", hariPiutang: 45, rencanaCabang: "Tidak", rencanaAlat: "Ya",
-    nilaiEkspansi: 850000000, supplier: 9 };
-  const faktor = [1.00, 1.02, 1.05, 1.12, 1.10, 0.98, 0.93, 1.08, 1.00, 0.96, 0.92, 0.90];
-  const bulan = ["2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08"];
-  const bulat = x => Math.round(x / 1000) * 1000;
-  let saldo = 280000000;
-  const rows = bulan.map((b, i) => {
-    const om = 420000000 * faktor[i];
-    const row = { bulan: b, pasien: Math.round(om / 650000),
-      tunai: bulat(om * .24), kartu: bulat(om * .36), qris: bulat(om * .04), transfer: bulat(om * .08), asuransi: bulat(om * .28),
-      sewa: 82000000, gaji: 118000000, obat: bulat(om * .17), retail: bulat(om * .06), utilitas: bulat(8500000 + 1000000 * (i % 3)),
-      marketing: bulat(15000000 * (i % 4 === 0 ? 1.4 : 1)), lain: 8000000, cicilan: 25000000 };
-    const masuk = row.tunai + row.kartu + row.qris + row.transfer + row.asuransi;
-    const keluar = row.sewa + row.gaji + row.obat + row.retail + row.utilitas + row.marketing + row.lain + row.cicilan;
-    saldo = saldo + masuk - keluar - 50000000;   // prive/dividen pemilik
-    row.saldo = bulat(saldo);
-    return row;
-  });
-  return buatWorkbook(profil, rows);
-}
-
 /* ---------- Event ---------- */
 function perluLibrary() {
   if (typeof XLSX === "undefined" || typeof Chart === "undefined") {
@@ -1150,12 +1126,6 @@ window.addEventListener("dragover", e => e.preventDefault());
 window.addEventListener("drop", e => e.preventDefault());
 
 $("btnTemplate").addEventListener("click", () => { if (perluLibrary()) XLSX.writeFile(buatWorkbook(null, []), "Template_Clinic_CashFlow_CheckUp.xlsx"); });
-$("btnContoh").addEventListener("click", () => {
-  if (!perluLibrary()) return;
-  // Diproses lewat jalur yang sama seperti file upload (tulis → baca ulang)
-  const buf = XLSX.write(dataContoh(), { type: "array", bookType: "xlsx" });
-  prosesWorkbook(XLSX.read(buf, { type: "array", cellDates: true }));
-});
 $("btnUlang").addEventListener("click", () => {
   $("hasil").classList.add("hidden");
   $("catatan").value = ""; $("catatanPrint").textContent = "";
