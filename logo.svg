@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="#0B2545"/>
+  <g fill="#FFFFFF">
+    <rect x="196" y="100" width="120" height="312" rx="26"/>
+    <rect x="100" y="196" width="312" height="120" rx="26"/>
+  </g>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="92,360 186,300 250,338 338,222" stroke="#0B2545" stroke-width="64"/>
+    <polyline points="92,360 186,300 250,338 338,222" stroke="#F2B705" stroke-width="34"/>
+  </g>
+  <path d="M312,178 L414,150 L386,252 Z" fill="#0B2545" stroke="#0B2545" stroke-width="30" stroke-linejoin="round"/>
+  <path d="M312,178 L414,150 L386,252 Z" fill="#F2B705" stroke="#F2B705" stroke-width="10" stroke-linejoin="round"/>
+</svg>
