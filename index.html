@@ -340,7 +340,6 @@
           <div class="side-actions">
             <button class="primary" id="btnTemplate">Download Template Excel</button>
             <button class="gold" id="btnContoh">Coba dengan Data Contoh</button>
-            <button id="btnUnduhContoh">Download File Contoh (sudah terisi)</button>
           </div>
         </div>
       </div>
@@ -1157,7 +1156,6 @@ $("btnContoh").addEventListener("click", () => {
   const buf = XLSX.write(dataContoh(), { type: "array", bookType: "xlsx" });
   prosesWorkbook(XLSX.read(buf, { type: "array", cellDates: true }));
 });
-$("btnUnduhContoh").addEventListener("click", () => { if (perluLibrary()) XLSX.writeFile(dataContoh(), "Contoh_Data_Klinik.xlsx"); });
 $("btnUlang").addEventListener("click", () => {
   $("hasil").classList.add("hidden");
   $("catatan").value = ""; $("catatanPrint").textContent = "";
