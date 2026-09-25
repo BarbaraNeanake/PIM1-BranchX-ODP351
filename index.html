@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clinic Cash Flow Check-Up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --navy: #003d79;
+    --navy-dk: #002b57;
+    --navy-lt: #eaf1f8;
+    --gold: #ffb700;
+    --gold-lt: #fff5da;
+    --bg: #f6f5f1;
+    --paper: #ffffff;
+    --ink: #17202b;
+    --ink-2: #4b5563;
+    --ink-3: #8a919b;
+    --rule: #e5e3dc;
+    --rule-lt: #efeee9;
+    --hijau: #1b7a3d;
+    --hijau-lt: #e8f4ec;
+    --kuning: #946400;
+    --kuning-dot: #e0a100;
+    --kuning-lt: #fdf3dc;
+    --merah: #b4271f;
+    --merah-lt: #fbeae8;
+    --r: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Plus Jakarta Sans", "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.55;
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    /* footer selalu menempel di bawah layar */
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  :root { --gutter: clamp(16px, 4vw, 40px); --gap: clamp(12px, 1.6vw, 18px); }
+  .wrap { width: 100%; max-width: 1200px; margin: 0 auto; padding-left: var(--gutter); padding-right: var(--gutter); }
+  .hidden { display: none !important; }
+  .muted { color: var(--ink-3); }
+  .small { font-size: 13px; }
+
+  /* ---------- Header ---------- */
+  .topbar { background: var(--paper); border-bottom: 1px solid var(--rule); }
+  .bar { display: flex; align-items: center; gap: 20px; padding-top: 16px; padding-bottom: 16px; }
+  .logo { height: 32px; width: auto; display: block; }
+  .titles { border-left: 1px solid var(--rule); padding-left: 20px; }
+  .app-title { font-size: 18px; font-weight: 700; color: var(--ink); letter-spacing: -.02em; }
+  .app-sub { font-size: 13px; color: var(--ink-3); }
+  .meta { margin-left: auto; font-size: 12px; color: var(--ink-3); text-align: right; }
+  .meta .owner { font-weight: 600; color: var(--navy); font-size: 12.5px; }
+  .accent { height: 3px; background: linear-gradient(90deg, var(--navy) 0 70%, var(--gold) 70% 100%); }
+
+  main { flex: 1 0 auto; padding-top: clamp(24px, 4vw, 44px); padding-bottom: clamp(32px, 5vw, 56px); }
+  #hasil > section:last-child { margin-bottom: 0; }
+  /* halaman awal (belum ada hasil): area upload diposisikan di tengah layar */
+  main:has(#hasil.hidden) { display: flex; flex-direction: column; justify-content: center; }
+  main:has(#hasil.hidden) #sec-upload { margin-bottom: 0; }
+  section { margin-bottom: clamp(32px, 4.5vw, 52px); }
+
+  /* ---------- Judul bagian ---------- */
+  .sec-head { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; margin-bottom: 14px; }
+  .sec-head .no { flex-basis: 100%; font-size: 12.5px; font-weight: 700; color: #c58d00; letter-spacing: .04em; margin-bottom: 2px; }
+  .sec-head h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--ink); letter-spacing: -.02em; }
+  .sec-head .desc { flex-basis: 100%; margin: 2px 0 0; font-size: 13.5px; color: var(--ink-3); }
+  .sec-head .aside { margin-left: auto; font-size: 12.5px; color: var(--ink-3); }
+
+  .panel { background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r); padding: clamp(16px, 2.4vw, 26px); }
+
+  /* ---------- Tombol ---------- */
+  button {
+    font: inherit; font-size: 14px; font-weight: 600; border-radius: 8px; padding: 10px 16px; cursor: pointer;
+    border: 1px solid var(--rule); background: var(--paper); color: var(--ink); transition: background .15s, border-color .15s;
+  }
+  button:hover { background: #f3f2ee; border-color: #d6d3ca; }
+  button.primary { background: var(--navy); border-color: var(--navy); color: #fff; }
+  button.primary:hover { background: var(--navy-dk); }
+  button.gold { background: var(--gold); border-color: var(--gold); color: #3a2a00; }
+  button.gold:hover { background: #ffc633; }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+  /* ---------- Upload ---------- */
+  .upload-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: clamp(18px, 3vw, 32px); }
+  .dropzone {
+    border: 1.5px dashed #c9c5ba; border-radius: 10px; background: #fbfaf7;
+    padding: 36px 20px; text-align: center; cursor: pointer; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px; min-height: 210px; transition: .15s;
+  }
+  .dropzone:hover, .dropzone.drag { border-color: var(--navy); background: var(--navy-lt); }
+  .dropzone:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .dropzone svg { color: var(--navy); margin-bottom: 6px; }
+  .dropzone .big { font-size: 16px; font-weight: 600; color: var(--ink); }
+  .dropzone .muted { font-size: 13.5px; }
+  .dropzone .fmt { font-size: 12px; color: var(--ink-3); margin-top: 8px; }
+  .steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+  .steps li { counter-increment: s; display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; padding: 8px 0; font-size: 14px; color: var(--ink-2); }
+  .steps li::before { content: counter(s); width: 24px; height: 24px; border-radius: 50%; background: var(--navy-lt); color: var(--navy); font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+  .side-actions { display: grid; gap: 8px; margin-top: 14px; }
+  .side-actions button { width: 100%; }
+  .privacy { margin-top: 14px; font-size: 12.5px; color: var(--ink-2); display: flex; gap: 8px; align-items: flex-start; }
+  .privacy svg { flex: none; color: var(--hijau); margin-top: 2px; }
+
+  .error { background: var(--merah-lt); border: 1px solid #efc4bf; color: #6d1712; border-radius: 10px; padding: 14px 18px; margin-top: 16px; }
+  .error ul { margin: 6px 0 0; padding-left: 20px; }
+
+  /* ---------- Profil ---------- */
+  .klinik-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 16px; }
+  .klinik-nama { font-size: 22px; font-weight: 700; color: var(--ink); margin: 0; letter-spacing: -.02em; }
+  .chip { font-size: 12px; font-weight: 500; color: var(--ink-2); background: #f1f0eb; border-radius: 6px; padding: 2px 8px; }
+  .profil-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: 16px 24px; }
+  .profil-grid .k { font-size: 12px; color: var(--ink-3); }
+  .profil-grid .v { font-weight: 600; font-size: 14.5px; }
+  .yn { font-weight: 600; }
+  .yn.ya { color: var(--hijau); }
+  .yn.tidak { color: var(--ink-3); }
+
+  /* ---------- Skor ---------- */
+  .skor-wrap { display: grid; grid-template-columns: minmax(280px, 340px) 1fr; gap: var(--gap); }
+  .skor-box .cap { font-size: 13px; color: var(--ink-3); }
+  .skor-line { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 2px; }
+  .skor-angka { font-size: 60px; font-weight: 800; line-height: 1; color: var(--ink); letter-spacing: -.04em; }
+  .skor-max { font-size: 16px; color: var(--ink-3); }
+  .skor-label { display: inline-block; font-size: 14px; font-weight: 700; padding: 3px 10px; border-radius: 6px; margin-top: 6px; }
+  .skor-box.hijau .skor-label { color: var(--hijau); background: var(--hijau-lt); }
+  .skor-box.kuning .skor-label { color: var(--kuning); background: var(--kuning-lt); }
+  .skor-box.merah .skor-label { color: var(--merah); background: var(--merah-lt); }
+  .meter { position: relative; margin: 20px 0 6px; }
+  .meter .track { display: grid; grid-template-columns: 50fr 25fr 25fr; height: 8px; gap: 3px; }
+  .meter .track span { border-radius: 4px; }
+  .meter .track span:nth-child(1) { background: #efc9c5; }
+  .meter .track span:nth-child(2) { background: #f5e0a8; }
+  .meter .track span:nth-child(3) { background: #bfe0c8; }
+  .meter .pin { position: absolute; top: -4px; width: 16px; height: 16px; border-radius: 50%; background: var(--paper); border: 3px solid var(--ink); transform: translateX(-8px); }
+  .meter .scale { font-size: 11px; color: var(--ink-3); margin-top: 6px; position: relative; height: 14px; }
+  .meter .scale span { position: absolute; transform: translateX(-50%); }
+  .skor-count { font-size: 12.5px; color: var(--ink-2); margin-top: 12px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .kpi { width: 100%; border-collapse: collapse; }
+  .kpi td { padding: 10px 0; border-bottom: 1px solid var(--rule-lt); font-size: 14px; color: var(--ink-2); }
+  .kpi td:last-child { text-align: right; font-weight: 600; color: var(--ink); white-space: nowrap; padding-left: 12px; }
+  .kpi tr:last-child td { border-bottom: 0; }
+  .kpi tr.potensi td { color: var(--navy); font-weight: 700; font-size: 15.5px; padding-top: 14px; }
+  .kpi tr.potensi td:first-child { font-weight: 600; }
+
+  /* ---------- Status ---------- */
+  .tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .tag::before { content: ""; width: 8px; height: 8px; border-radius: 50%; }
+  .tag.hijau { color: var(--hijau); } .tag.hijau::before { background: var(--hijau); }
+  .tag.kuning { color: var(--kuning); } .tag.kuning::before { background: var(--kuning-dot); border-radius: 1px; transform: rotate(45deg); }
+  .tag.merah { color: var(--merah); } .tag.merah::before { background: var(--merah); border-radius: 1px; }
+
+  /* ---------- Indikator ---------- */
+  .ind-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: var(--gap); }
+  .ind { background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r); padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; }
+  .ind .row1 { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .ind .judul { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .ind .nilai { font-size: 26px; font-weight: 700; color: var(--ink); line-height: 1.25; letter-spacing: -.03em; margin-top: 2px; }
+  .ind.merah .nilai { color: var(--merah); }
+  .ind .ket { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+
+  /* ---------- Grafik ---------- */
+  .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: var(--gap); }
+  .chart-card h3 { margin: 0 0 12px; font-size: 14.5px; font-weight: 600; color: var(--ink); }
+  .chart-box { position: relative; height: 250px; }
+  .chart-box img.print-img { display: none; width: 100%; height: 100%; object-fit: contain; }
+  .chart-note { font-size: 12px; color: var(--ink-3); margin-top: 8px; }
+  .donut-wrap { display: grid; grid-template-columns: 170px 1fr; gap: 18px; align-items: center; }
+  .donut-wrap .chart-box { height: 170px; }
+  .legend-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .legend-table td { padding: 4px 4px; border-bottom: 1px solid var(--rule-lt); }
+  .legend-table tr:last-child td { border-bottom: 0; }
+  .legend-table td.n { text-align: right; white-space: nowrap; color: var(--ink-3); }
+  .legend-table td.p { text-align: right; font-weight: 600; width: 52px; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: -1px; }
+
+  /* ---------- Insight ---------- */
+  .insight-list { margin: 0; padding: 0; list-style: none; }
+  .insight-list li { display: grid; grid-template-columns: 1fr 80px; gap: 16px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--rule-lt); font-size: 15px; }
+  .insight-list li:first-child { padding-top: 2px; }
+  .insight-list li:last-child { border-bottom: 0; padding-bottom: 2px; }
+  .insight-list .tag { justify-self: end; }
+
+  /* ---------- Rekomendasi ---------- */
+  .total-potensi { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; background: var(--navy); color: #fff; border-radius: var(--r); padding: 20px 24px; margin-bottom: 14px; }
+  .total-potensi .k { font-size: 13px; color: #b9cce3; }
+  .total-potensi .v { font-size: 30px; font-weight: 800; letter-spacing: -.03em; }
+  .total-potensi .v::after { content: ""; display: block; width: 36px; height: 3px; background: var(--gold); border-radius: 2px; margin-top: 6px; }
+  .total-potensi .ket { font-size: 13px; color: #b9cce3; max-width: 480px; margin-left: auto; }
+  .rek-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap: var(--gap); }
+  .rek { background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r); display: flex; flex-direction: column; overflow: hidden; }
+  .rek .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 16px 18px 4px; }
+  .rek .urut { font-size: 12px; color: var(--ink-3); }
+  .rek .nama { font-size: 17px; font-weight: 700; color: var(--ink); letter-spacing: -.02em; }
+  .prio { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 6px; white-space: nowrap; }
+  .prio.Tinggi { background: var(--navy-lt); color: var(--navy); }
+  .prio.Sedang { background: var(--gold-lt); color: #7a5500; }
+  .prio.Rendah { background: #f1f0eb; color: var(--ink-2); }
+  .rek ul { margin: 0; padding: 8px 18px 14px 34px; font-size: 13.5px; color: var(--ink-2); flex: 1; }
+  .rek ul li { margin-bottom: 4px; }
+  .rek .pot { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 12px 18px; background: #faf9f6; border-top: 1px solid var(--rule-lt); }
+  .rek .pot .k { font-size: 12.5px; color: var(--ink-3); }
+  .rek .pot .v { font-size: 18px; font-weight: 700; color: var(--navy); letter-spacing: -.02em; }
+  .rek .pot .note { flex-basis: 100%; font-size: 12px; color: var(--kuning); font-weight: 500; }
+
+  /* ---------- Catatan ---------- */
+  textarea { width: 100%; min-height: 130px; font: inherit; font-size: 14.5px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--rule); resize: vertical; background: #fbfaf7; }
+  textarea:focus { outline: 3px solid var(--navy-lt); border-color: var(--navy); background: #fff; }
+  .print-notes { display: none; white-space: pre-wrap; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .disclaimer { font-size: 12.5px; color: var(--ink-3); margin-top: 16px; max-width: 760px; }
+  .print-only { display: none; }
+
+  footer { background: var(--paper); border-top: 1px solid var(--rule); padding: 20px 0 26px; font-size: 12.5px; color: var(--ink-3); }
+  .foot p { margin: 0; }
+  .foot .own { max-width: 760px; }
+  .foot .own b { color: var(--ink-2); font-weight: 600; }
+  .foot .copy { margin-top: 10px; font-weight: 600; color: var(--navy); }
+
+  /* ---------- Tablet & HP ---------- */
+  @media (max-width: 900px) {
+    .upload-grid { grid-template-columns: 1fr; }
+    .dropzone { min-height: 170px; }
+    .side-actions { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+  }
+  @media (max-width: 720px) {
+    .skor-wrap { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .bar { flex-wrap: wrap; gap: 10px 16px; }
+    .logo { height: 26px; }
+    .titles { border-left: 0; padding-left: 0; flex-basis: 100%; }
+    .meta { margin-left: 0; text-align: left; flex-basis: 100%; }
+    .meta .no-print { display: none; }
+    .donut-wrap { grid-template-columns: 1fr; }
+    .donut-wrap .chart-box { width: 100%; max-width: 200px; margin: 0 auto; }
+    .skor-angka { font-size: 52px; }
+    .total-potensi .v { font-size: 26px; }
+    .insight-list li { grid-template-columns: 1fr; gap: 4px; }
+    .insight-list .tag { justify-self: start; grid-row: 1; }
+    .total-potensi .ket { margin-left: 0; }
+  }
+
+  /* ===== Cetak / PDF (A4) ===== */
+  @page { size: A4; margin: 12mm; }
+  @media print {
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: #fff; font-size: 11px; display: block; min-height: 0; }
+    .no-print { display: none !important; }
+    .print-only { display: block; }
+    .wrap { max-width: none; padding: 0; }
+    .bar { padding-top: 6px; padding-bottom: 8px; }
+    .logo { height: 24px; }
+    .meta { display: block; }
+    .meta .owner { font-size: 10.5px; }
+    main { padding: 12px 0 0; }
+    section { margin-bottom: 14px; }
+    .panel { padding: 10px 12px; }
+    .panel, .ind, .rek, .chart-card, .insight-list li, .total-potensi, .skor-wrap { break-inside: avoid; page-break-inside: avoid; }
+    .sec-head { margin-bottom: 6px; break-after: avoid; page-break-after: avoid; }
+    .sec-head h2 { font-size: 14px; }
+    .sec-head .desc { display: none; }
+    .profil-grid { grid-template-columns: repeat(4, 1fr); gap: 6px 12px; }
+    .skor-wrap { grid-template-columns: 220px 1fr; gap: 8px; }
+    .skor-angka { font-size: 42px; }
+    .kpi td { padding: 5px 0; font-size: 11px; }
+    .ind-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .ind { padding: 8px 10px; }
+    .ind .nilai { font-size: 17px; }
+    .ind .ket { font-size: 10px; }
+    .chart-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .chart-box { height: 185px; }
+    .donut-wrap { grid-template-columns: 125px 1fr; }
+    .donut-wrap .chart-box { height: 125px; }
+    .chart-box canvas { display: none !important; }
+    .chart-box img.print-img { display: block; }
+    .insight-list li { font-size: 11.5px; padding: 6px 0; }
+    .rek-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .rek .nama { font-size: 13px; }
+    .rek ul { font-size: 10.5px; padding-top: 4px; padding-bottom: 6px; }
+    .rek .pot .v { font-size: 14px; }
+    .total-potensi { padding: 12px 16px; }
+    .total-potensi .v { font-size: 20px; }
+    #sec-grafik { break-before: page; page-break-before: always; }
+    textarea { display: none; }
+    .print-notes { display: block; border: 1px solid var(--rule); border-radius: 8px; padding: 10px; min-height: 60px; }
+    footer { background: none; padding: 10px 0 0; font-size: 9.5px; break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap bar">
+    <img src="data:image/webp;base64,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" alt="Bank Mandiri" class="logo">
+    <div class="titles">
+      <div class="app-title">Clinic Cash Flow Check-Up</div>
+      <div class="app-sub">Alat bantu analisa arus kas klinik untuk RM</div>
+    </div>
+    <div class="meta"><div class="owner">Milik KCP Pondok Indah Mall 1</div><span class="no-print">Prototype · Penggunaan internal</span><span class="print-only" id="tglCetak"></span></div>
+  </div>
+  <div class="accent"></div>
+</header>
+
+<main class="wrap">
+
+  <!-- AREA UPLOAD -->
+  <section class="no-print" id="sec-upload">
+    <div class="sec-head"><h2>Upload data keuangan klinik</h2><p class="desc">Gunakan file Excel sesuai template. Belum punya datanya? Coba dulu dengan data contoh.</p></div>
+    <div class="panel">
+      <div class="upload-grid">
+        <div>
+          <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Pilih file Excel">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 17v-6m0 0-2.5 2.5M12 11l2.5 2.5"/></svg>
+            <div class="big">Tarik file Excel ke sini</div>
+            <div class="muted">atau klik untuk memilih file dari perangkat</div>
+            <div class="fmt">.xlsx · sheet Profil, Bulanan, Petunjuk</div>
+          </div>
+          <input type="file" id="fileInput" accept=".xlsx,.xls" class="hidden">
+          <div class="privacy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>File hanya diproses di perangkat ini. Data tidak dikirim ke server dan tidak disimpan; data hilang saat halaman ditutup atau di-refresh.</span></div>
+        </div>
+        <div>
+          <ol class="steps">
+            <li><span>Unduh template Excel dan serahkan ke klinik.</span></li>
+            <li><span>Klinik mengisi profil dan data 6–12 bulan terakhir.</span></li>
+            <li><span>Upload file di kotak upload. Hasil analisa langsung muncul.</span></li>
+          </ol>
+          <div class="side-actions">
+            <button class="primary" id="btnTemplate">Download Template Excel</button>
+            <button class="gold" id="btnContoh">Coba dengan Data Contoh</button>
+            <button id="btnUnduhContoh">Download File Contoh (sudah terisi)</button>
+          </div>
+        </div>
+      </div>
+      <div id="errorBox" class="error hidden" role="alert"></div>
+    </div>
+  </section>
+
+  <div id="hasil" class="hidden">
+
+    <!-- 01 PROFIL -->
+    <section id="sec-profil">
+      <div class="sec-head"><span class="no">01</span><h2>Profil klinik</h2><p class="desc">Data dasar dari sheet Profil.</p></div>
+      <div class="panel">
+        <div class="klinik-head">
+          <p class="klinik-nama" id="namaKlinik"></p>
+          <span class="chip" id="periodeData"></span>
+        </div>
+        <div class="profil-grid" id="profilGrid"></div>
+      </div>
+    </section>
+
+    <!-- 02 SKOR -->
+    <section id="sec-skor">
+      <div class="sec-head"><span class="no">02</span><h2>Skor kesehatan keuangan</h2><p class="desc">Gabungan 8 indikator arus kas, dengan bobot yang bisa diatur.</p></div>
+      <div class="skor-wrap">
+        <div class="panel skor-box" id="skorBox">
+          <div class="cap">Skor keseluruhan</div>
+          <div class="skor-line"><span class="skor-angka" id="skorAngka"></span><span class="skor-max">/ 100</span></div>
+          <div class="skor-label" id="skorLabel"></div>
+          <div class="meter" aria-hidden="true">
+            <div class="track"><span></span><span></span><span></span></div>
+            <div class="pin" id="skorPin"></div>
+            <div class="scale"><span style="left:0;transform:none">0</span><span style="left:50%">50</span><span style="left:75%">75</span><span style="right:0;transform:none">100</span></div>
+          </div>
+          <div class="skor-count" id="skorHitung"></div>
+        </div>
+        <div class="panel">
+          <table class="kpi" id="ringkas"></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 INDIKATOR -->
+    <section id="sec-indikator">
+      <div class="sec-head"><span class="no">03</span><h2>Indikator arus kas</h2><p class="desc">Hijau berarti aman, Kuning perlu dipantau, Merah perlu tindakan.</p></div>
+      <div class="ind-grid" id="indGrid"></div>
+    </section>
+
+    <!-- 04 GRAFIK -->
+    <section id="sec-grafik">
+      <div class="sec-head"><span class="no">04</span><h2>Grafik</h2><p class="desc">Tren bulanan, serta komposisi biaya dan sumber pendapatan.</p></div>
+      <div class="chart-grid">
+        <div class="panel chart-card">
+          <h3>Omzet vs Total Biaya per Bulan</h3>
+          <div class="chart-box"><canvas id="chOmzet"></canvas><img class="print-img" alt=""></div>
+        </div>
+        <div class="panel chart-card">
+          <h3>Saldo Kas Akhir Bulan</h3>
+          <div class="chart-box"><canvas id="chSaldo"></canvas><img class="print-img" alt=""></div>
+          <div class="chart-note">Batang merah = saldo kas di bawah 1 bulan biaya operasional.</div>
+        </div>
+        <div class="panel chart-card">
+          <h3>Komposisi Biaya (total periode)</h3>
+          <div class="donut-wrap">
+            <div class="chart-box"><canvas id="chBiaya"></canvas><img class="print-img" alt=""></div>
+            <table class="legend-table" id="lgBiaya"></table>
+          </div>
+        </div>
+        <div class="panel chart-card">
+          <h3>Payment Mix (sumber pendapatan)</h3>
+          <div class="donut-wrap">
+            <div class="chart-box"><canvas id="chMix"></canvas><img class="print-img" alt=""></div>
+            <table class="legend-table" id="lgMix"></table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 INSIGHT -->
+    <section id="sec-insight">
+      <div class="sec-head"><span class="no">05</span><h2>Key insights</h2><p class="desc">Temuan utama, diurutkan dari yang paling perlu perhatian.</p></div>
+      <div class="panel"><ol class="insight-list" id="insightList"></ol></div>
+    </section>
+
+    <!-- 06 REKOMENDASI -->
+    <section id="sec-rek">
+      <div class="sec-head"><span class="no">06</span><h2>Rekomendasi produk Bank Mandiri</h2><p class="desc">Produk yang cocok dengan kondisi klinik, diurutkan menurut prioritas lalu potensi.</p></div>
+      <div class="total-potensi">
+        <div>
+          <div class="k">Total Estimasi Potensi Bisnis</div>
+          <div class="v" id="totalPotensi"></div>
+        </div>
+        <div class="ket" id="totalKet"></div>
+      </div>
+      <div class="rek-grid" id="rekGrid"></div>
+    </section>
+
+    <!-- 07 CATATAN RM -->
+    <section id="sec-catatan">
+      <div class="sec-head"><span class="no">07</span><h2>Catatan BFTM</h2><p class="desc">Catatan ini ikut tercetak di PDF.</p></div>
+      <div class="panel">
+        <textarea id="catatan" placeholder="Hasil diskusi, kebutuhan klinik, tindak lanjut, nama PIC, dll."></textarea>
+        <div class="print-notes" id="catatanPrint"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="actions no-print">
+        <button class="primary" id="btnCetak">Cetak / Simpan PDF</button>
+        <button id="btnUlang">Analisa File Lain</button>
+      </div>
+      <p class="disclaimer">Hasil ini adalah analisa awal berdasarkan data dari klinik. Estimasi potensi dan plafon bersifat indikatif, bukan persetujuan kredit, dan tetap memerlukan analisa serta verifikasi sesuai ketentuan bank.</p>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <p class="own">Aplikasi <b>Clinic Cash Flow Check-Up</b> dikembangkan oleh dan menjadi milik <b>KCP Pondok Indah Mall 1 (KCP PIM 1)</b> sebagai alat bantu internal RM/BFTM/BFTS. Semua perhitungan berjalan di browser dan data klinik tidak disimpan.</p>
+    <p class="copy">© 2026 KCP Pondok Indah Mall 1 — BranchX ODP 351</p>
+  </div>
+</footer>
+
+<script>
+/* =====================================================================
+   CONFIG — SEMUA ATURAN & AMBANG BATAS ADA DI SINI
+   Cara mengubah: ganti angkanya saja, simpan file, lalu refresh browser.
+   Catatan: persen ditulis sebagai desimal → 0.15 artinya 15%.
+   ===================================================================== */
+const CONFIG = {
+  minBulan: 6,          // data bulanan minimal (bulan)
+  jendelaTren: 3,       // pertumbuhan: rata-rata N bulan terakhir vs N bulan pertama
+
+  indikator: {
+    // 1. Pertumbuhan Omzet — makin tinggi makin baik
+    pertumbuhan: { hijauJikaDiatas: 0.05, merahJikaDibawah: -0.05 },
+    // 2. Margin Arus Kas = (omzet − total biaya) / omzet — makin tinggi makin baik
+    margin:      { hijauJikaDiatas: 0.15, merahJikaDibawah: 0.05 },
+    // 3. Rasio Sewa & Service Charge terhadap Omzet — makin rendah makin baik
+    sewa:        { hijauJikaDibawah: 0.15, merahJikaDiatas: 0.25 },
+    // 4. Rasio Gaji terhadap Omzet — makin rendah makin baik
+    gaji:        { hijauJikaDibawah: 0.30, merahJikaDiatas: 0.40 },
+    // 5. Buffer Kas (dalam bulan) = saldo kas terakhir / rata-rata biaya bulanan
+    buffer:      { hijauJikaDiatas: 3, merahJikaDibawah: 1 },
+    // 6. Stabilitas Omzet = koefisien variasi (naik-turunnya omzet) — makin rendah makin stabil
+    stabilitas:  { hijauJikaDibawah: 0.10, merahJikaDiatas: 0.25 },
+    // 7. Porsi Transaksi Tunai — makin rendah makin baik
+    tunai:       { hijauJikaDibawah: 0.15, merahJikaDiatas: 0.30 },
+    // 8. Ketergantungan Asuransi/Korporat
+    //    Merah  : porsi > porsiMerah DAN pencairan > hariMerah
+    //    Kuning : porsi > porsiKuning ATAU pencairan > hariMerah
+    //    Hijau  : selain itu
+    asuransi:    { porsiMerah: 0.40, hariMerah: 30, porsiKuning: 0.25 }
+  },
+
+  // Nilai tiap status untuk menghitung skor
+  nilaiStatus: { hijau: 100, kuning: 60, merah: 20 },
+
+  // Bobot tiap indikator dalam skor keseluruhan (makin besar makin berpengaruh)
+  bobot: {
+    pertumbuhan: 1, margin: 1.5, sewa: 1, gaji: 1,
+    buffer: 1.5, stabilitas: 1, tunai: 0.5, asuransi: 1
+  },
+
+  // Label skor
+  labelSkor: { sehatMin: 75, perhatianMin: 50 },   // ≥75 Sehat, 50–74 Perlu Perhatian, <50 Berisiko
+
+  // Aturan rekomendasi produk
+  rekomendasi: {
+    edc:      { aktif: true, prioritas: "Tinggi", porsiKartuMin: 0.30 },
+    qris:     { aktif: true, prioritas: "Sedang", porsiTunaiMin: 0.20, porsiDariTunai: 0.30 },
+    payroll:  { aktif: true, prioritas: "Tinggi", karyawanMin: 10 },
+    kopra:    { aktif: true, prioritas: "Sedang", supplierMin: 5, biayaBulananMin: 200000000 },
+    kmk:      { aktif: true, prioritas: "Sedang", prioritasJikaKasMerah: "Tinggi",
+                bufferDibawah: 1.5, porsiAsuransiMin: 0.30, hariPencairanMin: 30,
+                plafonMinKali: 1, plafonMaksKali: 2 },   // plafon = 1–2 × rata-rata biaya bulanan
+    investasi:{ aktif: true, prioritas: "Tinggi" },
+    giro:     { aktif: true, prioritas: "Sedang", bufferDiatas: 4, sisakanBulan: 3 }
+  },
+
+  // Untuk Total Potensi, KMK dihitung pakai plafon minimum (konservatif). Ganti ke "maks" jika perlu.
+  kmkUntukTotal: "min"
+};
+/* ======================= AKHIR CONFIG ======================= */
+
+
+/* ---------- Definisi template ---------- */
+const PROFIL_FIELDS = [
+  { key: "nama",        label: "Nama Klinik",                                   tipe: "teks",  wajib: true, contoh: "Klinik Sehat Ceria" },
+  { key: "lokasi",      label: "Lokasi (Mall)",                                 tipe: "teks",  contoh: "Grand Indonesia", alias: ["lokasi", "mall"] },
+  { key: "jenis",       label: "Jenis Layanan",                                 tipe: "teks",  contoh: "Umum / Gigi / Estetika / Spesialis / Lainnya" },
+  { key: "tahun",       label: "Tahun Berdiri",                                 tipe: "angka", contoh: 2018 },
+  { key: "cabang",      label: "Jumlah Cabang",                                 tipe: "angka", contoh: 1 },
+  { key: "karyawan",    label: "Jumlah Karyawan",                               tipe: "angka", contoh: 15 },
+  { key: "gajian",      label: "Tanggal Gajian",                                tipe: "angka", contoh: 25 },
+  { key: "bank",        label: "Bank Utama Saat Ini",                           tipe: "teks",  contoh: "Bank X" },
+  { key: "edc",         label: "Sudah Pakai EDC Mandiri",                       tipe: "yatidak", contoh: "Ya/Tidak" },
+  { key: "qris",        label: "Sudah Pakai QRIS Mandiri",                      tipe: "yatidak", contoh: "Ya/Tidak" },
+  { key: "payroll",     label: "Sudah Payroll Mandiri",                         tipe: "yatidak", contoh: "Ya/Tidak" },
+  { key: "kopra",       label: "Sudah Pakai Kopra",                             tipe: "yatidak", contoh: "Ya/Tidak" },
+  { key: "hariPiutang", label: "Rata-rata Hari Pencairan Piutang Asuransi/Korporat", tipe: "angka", contoh: 30 },
+  { key: "rencanaCabang", label: "Rencana Buka Cabang Baru",                    tipe: "yatidak", contoh: "Ya/Tidak" },
+  { key: "rencanaAlat", label: "Rencana Beli Alat Medis",                       tipe: "yatidak", contoh: "Ya/Tidak" },
+  { key: "nilaiEkspansi", label: "Estimasi Nilai Ekspansi/Alat (Rp)",           tipe: "angka", contoh: 500000000 },
+  { key: "supplier",    label: "Jumlah Supplier Aktif",                         tipe: "angka", contoh: 6 }
+];
+
+const BULANAN_COLS = [
+  { key: "bulan",     label: "Bulan" },
+  { key: "pasien",    label: "Jumlah Pasien" },
+  { key: "tunai",     label: "Pendapatan Tunai",              grup: "pendapatan" },
+  { key: "kartu",     label: "Pendapatan Kartu (EDC)",        grup: "pendapatan", alias: ["pendapatankartu", "pendapatanedc"] },
+  { key: "qris",      label: "Pendapatan QRIS",               grup: "pendapatan" },
+  { key: "transfer",  label: "Pendapatan Transfer",           grup: "pendapatan" },
+  { key: "asuransi",  label: "Pendapatan Asuransi/Korporat",  grup: "pendapatan", alias: ["pendapatanasuransi"] },
+  { key: "sewa",      label: "Biaya Sewa & Service Charge Mall", grup: "biaya", alias: ["biayasewaservicecharge", "biayasewa", "biayasewadanservicechargemall"] },
+  { key: "gaji",      label: "Biaya Gaji",                    grup: "biaya" },
+  { key: "obat",      label: "Biaya Obat & Bahan Medis",      grup: "biaya", alias: ["biayaobatdanbahanmedis", "biayaobat"] },
+  { key: "retail",    label: "Biaya Produk Retail",           grup: "biaya" },
+  { key: "utilitas",  label: "Biaya Utilitas",                grup: "biaya" },
+  { key: "marketing", label: "Biaya Marketing",               grup: "biaya" },
+  { key: "lain",      label: "Biaya Lain-lain",               grup: "biaya", alias: ["biayalainnya", "biayalain"] },
+  { key: "cicilan",   label: "Cicilan Pinjaman",              grup: "biaya" },
+  { key: "saldo",     label: "Saldo Kas Akhir Bulan" }
+];
+const KOL_PENDAPATAN = BULANAN_COLS.filter(c => c.grup === "pendapatan");
+const KOL_BIAYA = BULANAN_COLS.filter(c => c.grup === "biaya");
+
+const NAMA_BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+const NAMA_BULAN_PENDEK = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+
+// Warna grafik (palet kategori yang sudah diuji aman untuk buta warna)
+const WARNA_UTAMA = "#003d79";   // biru Mandiri untuk seri utama
+const WARNA = ["#2a78d6","#eb6834","#1baf7a","#eda100","#e87ba4","#008300","#4a3aa7","#e34948"];
+
+/* ---------- Utilitas format ---------- */
+const fmtAngka = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 });
+const rp = n => (n < 0 ? "−Rp " : "Rp ") + fmtAngka.format(Math.round(Math.abs(n)));
+const rpSingkat = n => {
+  const a = Math.abs(n), s = n < 0 ? "−" : "";
+  if (a >= 1e9) return s + "Rp " + (a / 1e9).toLocaleString("id-ID", { maximumFractionDigits: 2 }) + " M";
+  if (a >= 1e6) return s + "Rp " + (a / 1e6).toLocaleString("id-ID", { maximumFractionDigits: 0 }) + " jt";
+  return s + "Rp " + fmtAngka.format(a);
+};
+const pct = (x, d = 1) => (x * 100).toLocaleString("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: d }) + "%";
+const desimal = (x, d = 1) => x.toLocaleString("id-ID", { minimumFractionDigits: d, maximumFractionDigits: d });
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const norm = s => String(s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const sum = a => a.reduce((x, y) => x + y, 0);
+const avg = a => a.length ? sum(a) / a.length : 0;
+const labelBulan = ym => { const [y, m] = ym.split("-").map(Number); return NAMA_BULAN_PENDEK[m - 1] + " " + y; };
+const labelBulanPanjang = ym => { const [y, m] = ym.split("-").map(Number); return NAMA_BULAN[m - 1] + " " + y; };
+
+function keAngka(v) {
+  if (v === null || v === undefined || v === "") return 0;
+  if (typeof v === "number") return v;
+  let s = String(v).trim();
+  if (!s || s === "-") return 0;
+  const neg = /^\(.*\)$/.test(s) || /^[−-]/.test(s.replace(/^rp\s*/i, ""));
+  s = s.replace(/[^0-9.,]/g, "");
+  if (!s) return NaN;
+  if (/,\d{1,2}$/.test(s)) s = s.replace(/\./g, "").replace(",", ".");   // 1.250.000,50
+  else if (/^\d+\.\d{1,2}$/.test(s)) { /* 12.5 → desimal */ }
+  else s = s.replace(/[.,]/g, "");                                         // 1.250.000 / 1,250,000
+  const n = parseFloat(s);
+  return isNaN(n) ? NaN : (neg ? -n : n);
+}
+function keYaTidak(v) {
+  const s = norm(v);
+  return ["ya", "y", "yes", "true", "1", "sudah", "iya"].includes(s);
+}
+function keBulan(v) {
+  if (v instanceof Date && !isNaN(v)) {
+    // tambah 12 jam supaya aman dari pergeseran zona waktu
+    const d = new Date(v.getTime() + 12 * 3600 * 1000);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  }
+  if (typeof v === "number" && v > 20000 && v < 80000) {
+    const d = XLSX.SSF.parse_date_code(v);
+    return d.y + "-" + String(d.m).padStart(2, "0");
+  }
+  const s = String(v ?? "").trim();
+  let m = s.match(/^(\d{4})[-\/.](\d{1,2})/);
+  if (m && +m[2] >= 1 && +m[2] <= 12) return m[1] + "-" + m[2].padStart(2, "0");
+  m = s.match(/^(\d{1,2})[-\/.](\d{4})$/);
+  if (m && +m[1] >= 1 && +m[1] <= 12) return m[2] + "-" + m[1].padStart(2, "0");
+  return null;
+}
+
+/* ---------- Membaca workbook ---------- */
+class ValidasiError extends Error { constructor(list) { super("validasi"); this.list = list; } }
+
+function cariSheet(wb, nama) {
+  return wb.SheetNames.find(n => norm(n) === norm(nama));
+}
+
+function bacaWorkbook(wb) {
+  const err = [];
+  const shProfil = cariSheet(wb, "Profil");
+  const shBulanan = cariSheet(wb, "Bulanan");
+  if (!shProfil) err.push('Sheet <b>"Profil"</b> tidak ditemukan. Pastikan nama sheet persis "Profil".');
+  if (!shBulanan) err.push('Sheet <b>"Bulanan"</b> tidak ditemukan. Pastikan nama sheet persis "Bulanan".');
+  if (err.length) {
+    err.push("Sheet yang ada di file ini: " + wb.SheetNames.map(n => '"' + esc(n) + '"').join(", ") + ". Gunakan tombol <b>Download Template Excel</b> agar formatnya sesuai.");
+    throw new ValidasiError(err);
+  }
+
+  /* Profil */
+  const rowsP = XLSX.utils.sheet_to_json(wb.Sheets[shProfil], { header: 1, defval: "", raw: true });
+  const mapP = {};
+  rowsP.forEach(r => { if (r[0] !== "") mapP[norm(r[0])] = r[1]; });
+  const profil = {};
+  PROFIL_FIELDS.forEach(f => {
+    const kandidat = [norm(f.label), ...(f.alias || [])];
+    const k = kandidat.find(x => x in mapP);
+    const raw = k ? mapP[k] : "";
+    if (f.tipe === "angka") {
+      const n = keAngka(raw);
+      if (isNaN(n)) err.push(`Sheet "Profil", baris <b>${esc(f.label)}</b>: isian "${esc(raw)}" harus berupa angka.`);
+      profil[f.key] = isNaN(n) ? 0 : n;
+    } else if (f.tipe === "yatidak") {
+      profil[f.key] = keYaTidak(raw);
+    } else {
+      profil[f.key] = String(raw ?? "").trim();
+    }
+    if (f.wajib && !String(raw ?? "").trim()) err.push(`Sheet "Profil": <b>${esc(f.label)}</b> belum diisi (kolom B).`);
+  });
+  if (profil.gajian && (profil.gajian < 1 || profil.gajian > 31)) err.push(`Sheet "Profil": <b>Tanggal Gajian</b> harus antara 1–31.`);
+
+  /* Bulanan */
+  const rowsB = XLSX.utils.sheet_to_json(wb.Sheets[shBulanan], { header: 1, defval: "", raw: true });
+  const hdrIdx = rowsB.findIndex(r => r.some(c => norm(c) === "bulan"));
+  if (hdrIdx < 0) {
+    err.push('Sheet "Bulanan": baris judul kolom tidak ditemukan (harus ada kolom <b>Bulan</b> di baris pertama).');
+    throw new ValidasiError(err);
+  }
+  const header = rowsB[hdrIdx].map(norm);
+  const idx = {};
+  const hilang = [];
+  BULANAN_COLS.forEach(c => {
+    const kandidat = [norm(c.label), ...(c.alias || [])];
+    const i = header.findIndex(h => kandidat.includes(h));
+    if (i < 0) hilang.push(c.label); else idx[c.key] = i;
+  });
+  if (hilang.length) {
+    err.push('Sheet "Bulanan": kolom berikut tidak ditemukan — ' + hilang.map(h => "<b>" + esc(h) + "</b>").join(", ") + ". Jangan ubah judul kolom dari template.");
+    throw new ValidasiError(err);
+  }
+
+  const data = [];
+  rowsB.slice(hdrIdx + 1).forEach((r, i) => {
+    const barisExcel = hdrIdx + i + 2;
+    if (r.every(c => c === "" || c === null)) return;         // baris kosong dilewati
+    const bulan = keBulan(r[idx.bulan]);
+    if (!bulan) { err.push(`Sheet "Bulanan" baris ${barisExcel}: kolom <b>Bulan</b> "${esc(r[idx.bulan])}" tidak valid. Gunakan format YYYY-MM, contoh 2025-01.`); return; }
+    const row = { bulan };
+    BULANAN_COLS.forEach(c => {
+      if (c.key === "bulan") return;
+      const n = keAngka(r[idx[c.key]]);
+      if (isNaN(n)) err.push(`Sheet "Bulanan" baris ${barisExcel}: kolom <b>${esc(c.label)}</b> berisi "${esc(r[idx[c.key]])}", harus angka.`);
+      row[c.key] = isNaN(n) ? 0 : n;
+    });
+    row.omzet = sum(KOL_PENDAPATAN.map(c => row[c.key]));
+    row.biaya = sum(KOL_BIAYA.map(c => row[c.key]));
+    data.push(row);
+  });
+
+  const dup = data.map(d => d.bulan).filter((b, i, a) => a.indexOf(b) !== i);
+  if (dup.length) err.push('Sheet "Bulanan": bulan berikut muncul lebih dari sekali — ' + [...new Set(dup)].map(labelBulanPanjang).join(", ") + ".");
+  if (data.length < CONFIG.minBulan) err.push(`Sheet "Bulanan": data baru <b>${data.length} bulan</b>. Minimal ${CONFIG.minBulan} bulan (ideal 12 bulan).`);
+  if (data.length && data.every(d => d.omzet === 0)) err.push('Sheet "Bulanan": semua kolom pendapatan bernilai 0. Mohon isi data pendapatan.');
+  if (err.length) throw new ValidasiError(err);
+
+  data.sort((a, b) => a.bulan.localeCompare(b.bulan));
+  return { profil, data };
+}
+
+/* ---------- Status ---------- */
+const statusNaik = (v, t) => v > t.hijauJikaDiatas ? "hijau" : v < t.merahJikaDibawah ? "merah" : "kuning";   // makin tinggi makin baik
+const statusTurun = (v, t) => v < t.hijauJikaDibawah ? "hijau" : v > t.merahJikaDiatas ? "merah" : "kuning";  // makin rendah makin baik
+const LABEL_STATUS = { hijau: "Hijau", kuning: "Kuning", merah: "Merah" };
+
+/* ---------- Analisa ---------- */
+function analisa({ profil, data }) {
+  const C = CONFIG.indikator;
+  const n = data.length, w = Math.min(CONFIG.jendelaTren, Math.floor(n / 2));
+  const omzet = data.map(d => d.omzet), biaya = data.map(d => d.biaya);
+  const totOmzet = sum(omzet), totBiaya = sum(biaya);
+  const tot = k => sum(data.map(d => d[k]));
+  const avgBiaya = avg(biaya);
+  const r = { n, w, totOmzet, totBiaya, avgOmzet: avg(omzet), avgBiaya, tot };
+
+  // 1. Pertumbuhan
+  const awal = avg(omzet.slice(0, w)), akhir = avg(omzet.slice(-w));
+  r.pertumbuhan = awal > 0 ? akhir / awal - 1 : 0;
+  // 2. Margin
+  r.margin = totOmzet > 0 ? (totOmzet - totBiaya) / totOmzet : 0;
+  // 3–4. Rasio sewa & gaji
+  r.sewa = totOmzet > 0 ? tot("sewa") / totOmzet : 0;
+  r.gaji = totOmzet > 0 ? tot("gaji") / totOmzet : 0;
+  // 5. Buffer
+  r.saldoAkhir = data[n - 1].saldo;
+  r.buffer = avgBiaya > 0 ? r.saldoAkhir / avgBiaya : 0;
+  // 6. Stabilitas (koefisien variasi)
+  const m = avg(omzet);
+  const sd = Math.sqrt(avg(omzet.map(x => (x - m) ** 2)));
+  r.cv = m > 0 ? sd / m : 0;
+  r.bulanMax = data.reduce((a, b) => b.omzet > a.omzet ? b : a);
+  r.bulanMin = data.reduce((a, b) => b.omzet < a.omzet ? b : a);
+  // 7. Porsi tunai & mix
+  r.porsi = {};
+  KOL_PENDAPATAN.forEach(c => r.porsi[c.key] = totOmzet > 0 ? tot(c.key) / totOmzet : 0);
+  // 8. Asuransi
+  r.hariPiutang = profil.hariPiutang || 0;
+
+  const stAsuransi = (r.porsi.asuransi > C.asuransi.porsiMerah && r.hariPiutang > C.asuransi.hariMerah) ? "merah"
+    : (r.porsi.asuransi > C.asuransi.porsiKuning || r.hariPiutang > C.asuransi.hariMerah) ? "kuning" : "hijau";
+
+  r.ind = [
+    { key: "pertumbuhan", judul: "Pertumbuhan Omzet", nilai: (r.pertumbuhan >= 0 ? "+" : "") + pct(r.pertumbuhan), status: statusNaik(r.pertumbuhan, C.pertumbuhan),
+      ket: `Rata-rata omzet ${w} bulan terakhir (${rpSingkat(akhir)}) dibanding ${w} bulan pertama (${rpSingkat(awal)}). Sehat bila > ${pct(C.pertumbuhan.hijauJikaDiatas)}.` },
+    { key: "margin", judul: "Margin Arus Kas", nilai: pct(r.margin), status: statusNaik(r.margin, C.margin),
+      ket: `Sisa kas dari setiap Rp 100 omzet setelah semua biaya & cicilan. Sehat bila > ${pct(C.margin.hijauJikaDiatas)}.` },
+    { key: "sewa", judul: "Rasio Sewa terhadap Omzet", nilai: pct(r.sewa), status: statusTurun(r.sewa, C.sewa),
+      ket: `Porsi omzet untuk sewa & service charge mall. Sehat bila < ${pct(C.sewa.hijauJikaDibawah)}, berat bila > ${pct(C.sewa.merahJikaDiatas)}.` },
+    { key: "gaji", judul: "Rasio Gaji terhadap Omzet", nilai: pct(r.gaji), status: statusTurun(r.gaji, C.gaji),
+      ket: `Porsi omzet untuk gaji karyawan. Sehat bila < ${pct(C.gaji.hijauJikaDibawah)}, berat bila > ${pct(C.gaji.merahJikaDiatas)}.` },
+    { key: "buffer", judul: "Buffer Kas", nilai: desimal(r.buffer) + " bulan", status: statusNaik(r.buffer, C.buffer),
+      ket: `Saldo kas terakhir (${rpSingkat(r.saldoAkhir)}) cukup untuk membiayai operasional selama ${desimal(r.buffer)} bulan. Sehat bila > ${C.buffer.hijauJikaDiatas} bulan.` },
+    { key: "stabilitas", judul: "Stabilitas Omzet (Musiman)", nilai: pct(r.cv), status: statusTurun(r.cv, C.stabilitas),
+      ket: `Naik-turunnya omzet antarbulan. Tertinggi ${labelBulan(r.bulanMax.bulan)} (${rpSingkat(r.bulanMax.omzet)}), terendah ${labelBulan(r.bulanMin.bulan)} (${rpSingkat(r.bulanMin.omzet)}).` },
+    { key: "tunai", judul: "Porsi Transaksi Tunai", nilai: pct(r.porsi.tunai), status: statusTurun(r.porsi.tunai, C.tunai),
+      ket: `Pendapatan yang masih diterima tunai. Makin kecil makin baik (sehat < ${pct(C.tunai.hijauJikaDibawah)}).` },
+    { key: "asuransi", judul: "Ketergantungan Asuransi/Korporat", nilai: pct(r.porsi.asuransi) + " · " + fmtAngka.format(r.hariPiutang) + " hari", status: stAsuransi,
+      ket: `Porsi pendapatan dari asuransi/korporat dan lama pencairannya. Berisiko bila > ${pct(C.asuransi.porsiMerah)} dan > ${C.asuransi.hariMerah} hari.` }
+  ];
+  r.st = Object.fromEntries(r.ind.map(i => [i.key, i.status]));
+
+  // Skor
+  let tb = 0, tn = 0;
+  r.ind.forEach(i => { const b = CONFIG.bobot[i.key] ?? 1; tb += b; tn += b * CONFIG.nilaiStatus[i.status]; });
+  r.skor = Math.round(tb ? tn / tb : 0);
+  r.labelSkor = r.skor >= CONFIG.labelSkor.sehatMin ? "Sehat" : r.skor >= CONFIG.labelSkor.perhatianMin ? "Perlu Perhatian" : "Berisiko";
+  r.warnaSkor = r.skor >= CONFIG.labelSkor.sehatMin ? "hijau" : r.skor >= CONFIG.labelSkor.perhatianMin ? "kuning" : "merah";
+
+  r.insights = buatInsight(r, data, profil);
+  r.rek = buatRekomendasi(r, data, profil);
+  return r;
+}
+
+/* ---------- Key Insights ---------- */
+function buatInsight(r, data, profil) {
+  const C = CONFIG.indikator, out = [];
+  const tambah = (key, teks) => out.push({ key, status: r.st[key], teks });
+
+  // Pertumbuhan
+  {
+    const v = r.pertumbuhan;
+    if (v < 0) {
+      const tail = data.slice(-(r.w + 1));
+      const turun = [];
+      for (let i = 1; i < tail.length; i++) if (tail[i].omzet < tail[i - 1].omzet) turun.push(tail[i].bulan);
+      const kapan = turun.length ? `, terutama di bulan ${turun.length > 1 ? NAMA_BULAN[+turun[0].slice(5) - 1] + "–" + labelBulanPanjang(turun[turun.length - 1]) : labelBulanPanjang(turun[0])}` : "";
+      tambah("pertumbuhan", `Omzet turun ${pct(-v)} dalam ${r.w} bulan terakhir dibanding ${r.w} bulan pertama${kapan}.`);
+    } else {
+      tambah("pertumbuhan", `Omzet ${v > C.pertumbuhan.hijauJikaDiatas ? "tumbuh" : "relatif stabil, naik"} ${pct(v)} dalam ${r.w} bulan terakhir dibanding ${r.w} bulan pertama.`);
+    }
+  }
+  // Margin
+  {
+    const s = r.st.margin;
+    tambah("margin", s === "merah"
+      ? `Margin arus kas hanya ${pct(r.margin)} — hampir seluruh pemasukan habis untuk biaya dan cicilan.`
+      : s === "kuning"
+        ? `Margin arus kas ${pct(r.margin)}, masih positif tetapi di bawah level sehat ${pct(C.margin.hijauJikaDiatas)}.`
+        : `Margin arus kas sehat di ${pct(r.margin)}; rata-rata surplus kas ${rp((r.totOmzet - r.totBiaya) / r.n)} per bulan.`);
+  }
+  // Sewa
+  tambah("sewa", `Biaya sewa mall menyerap ${pct(r.sewa)} omzet, ${r.sewa > C.sewa.merahJikaDiatas ? "di atas batas sehat " + pct(C.sewa.merahJikaDiatas) : r.sewa >= C.sewa.hijauJikaDibawah ? "mendekati batas " + pct(C.sewa.merahJikaDiatas) + " sehingga perlu dijaga" : "masih dalam batas sehat"}.`);
+  // Gaji
+  tambah("gaji", `Biaya gaji ${pct(r.gaji)} dari omzet, ${r.gaji > C.gaji.merahJikaDiatas ? "di atas batas sehat " + pct(C.gaji.merahJikaDiatas) : r.gaji >= C.gaji.hijauJikaDibawah ? "mendekati batas " + pct(C.gaji.merahJikaDiatas) : "masih efisien"}${profil.karyawan ? " untuk " + fmtAngka.format(profil.karyawan) + " karyawan" : ""}.`);
+  // Buffer
+  {
+    const s = r.st.buffer;
+    tambah("buffer", s === "merah"
+      ? `Kas hanya cukup untuk ${desimal(r.buffer)} bulan operasional, sehingga rawan saat bulan sepi.`
+      : s === "kuning"
+        ? `Kas cukup untuk ${desimal(r.buffer)} bulan operasional; idealnya di atas ${C.buffer.hijauJikaDiatas} bulan agar aman menghadapi bulan sepi.`
+        : `Kas kuat, cukup untuk ${desimal(r.buffer)} bulan operasional${r.buffer > CONFIG.rekomendasi.giro.bufferDiatas ? " — ada dana mengendap yang bisa dioptimalkan" : ""}.`);
+  }
+  // Stabilitas
+  tambah("stabilitas", `Omzet ${r.st.stabilitas === "merah" ? "sangat berfluktuasi" : r.st.stabilitas === "kuning" ? "cukup berfluktuasi" : "relatif stabil"} (variasi ${pct(r.cv)}): tertinggi di ${labelBulanPanjang(r.bulanMax.bulan)} (${rpSingkat(r.bulanMax.omzet)}), terendah di ${labelBulanPanjang(r.bulanMin.bulan)} (${rpSingkat(r.bulanMin.omzet)}).`);
+  // Tunai
+  {
+    const nonTunai = 1 - r.porsi.tunai;
+    tambah("tunai", r.st.tunai === "merah"
+      ? `Transaksi tunai masih ${pct(r.porsi.tunai)} dari omzet — rawan selisih kas dan peluang besar digitalisasi pembayaran lewat QRIS/EDC.`
+      : `${pct(nonTunai, 0)} transaksi sudah non-tunai${r.porsi.kartu > CONFIG.rekomendasi.edc.porsiKartuMin ? ` (kartu ${pct(r.porsi.kartu, 0)}), jadi potensi penempatan EDC tinggi` : ""}.`);
+  }
+  // Asuransi
+  tambah("asuransi", `Pendapatan asuransi/korporat ${pct(r.porsi.asuransi)} omzet dengan pencairan rata-rata ${fmtAngka.format(r.hariPiutang)} hari${r.st.asuransi === "merah" ? " — kas banyak tertahan di piutang" : r.st.asuransi === "kuning" ? ", perlu dipantau agar tidak menekan kas" : ", masih aman"}.`);
+
+  const urut = { merah: 0, kuning: 1, hijau: 2 };
+  out.sort((a, b) => urut[a.status] - urut[b.status] || (CONFIG.bobot[b.key] ?? 1) - (CONFIG.bobot[a.key] ?? 1));
+  const bermasalah = out.filter(o => o.status !== "hijau");
+  const jumlah = Math.min(5, Math.max(3, bermasalah.length));
+  return out.slice(0, jumlah);
+}
+
+/* ---------- Rekomendasi produk ---------- */
+function buatRekomendasi(r, data, profil) {
+  const R = CONFIG.rekomendasi, out = [];
+  const rata = k => r.tot(k) / r.n;
+
+  if (R.edc.aktif && r.porsi.kartu > R.edc.porsiKartuMin && !profil.edc) {
+    out.push({ produk: "EDC Mandiri", kategori: "Transaksi / Acquiring", prioritas: R.edc.prioritas, potensi: rata("kartu"),
+      jenisPotensi: "Volume transaksi kartu per bulan",
+      alasan: [`Pembayaran kartu mencapai ${pct(r.porsi.kartu)} omzet (di atas ${pct(R.edc.porsiKartuMin)}).`,
+               `Rata-rata ${rp(rata("kartu"))} per bulan masih diproses lewat EDC bank lain${profil.bank ? " (" + esc(profil.bank) + ")" : ""}.`,
+               `Dana settlement EDC masuk ke rekening Mandiri → menambah saldo giro/tabungan.`] });
+  }
+  if (R.qris.aktif && (r.porsi.tunai > R.qris.porsiTunaiMin || r.tot("qris") === 0) && !profil.qris) {
+    const a = [];
+    if (r.porsi.tunai > R.qris.porsiTunaiMin) a.push(`Transaksi tunai masih ${pct(r.porsi.tunai)} omzet (rata-rata ${rp(rata("tunai"))}/bulan).`);
+    if (r.tot("qris") === 0) a.push("Klinik belum menerima pembayaran QRIS sama sekali.");
+    a.push(`Target konversi ${pct(R.qris.porsiDariTunai, 0)} transaksi tunai ke QRIS Livin' Merchant: lebih praktis, tercatat otomatis, dan mengurangi risiko selisih kas.`);
+    out.push({ produk: "QRIS / Livin' Merchant", kategori: "Transaksi / Digital Payment", prioritas: R.qris.prioritas,
+      potensi: R.qris.porsiDariTunai * rata("tunai"), jenisPotensi: "Volume transaksi QRIS per bulan", alasan: a });
+  }
+  if (R.payroll.aktif && profil.karyawan >= R.payroll.karyawanMin && !profil.payroll) {
+    out.push({ produk: "Payroll Mandiri", kategori: "Dana / Payroll", prioritas: R.payroll.prioritas, potensi: rata("gaji"),
+      jenisPotensi: "Dana payroll per bulan",
+      alasan: [`Klinik memiliki ${fmtAngka.format(profil.karyawan)} karyawan dengan biaya gaji rata-rata ${rp(rata("gaji"))}/bulan.`,
+               profil.gajian ? `Gajian setiap tanggal ${profil.gajian} → dana mengendap di Mandiri menjelang dan setelah tanggal gajian.` : "Dana gaji akan mengendap di rekening Mandiri menjelang tanggal gajian.",
+               `Peluang cross-sell ke ${fmtAngka.format(profil.karyawan)} karyawan: tabungan, Livin', kartu kredit, KSM.`] });
+  }
+  if (R.kopra.aktif && (profil.supplier >= R.kopra.supplierMin || r.avgBiaya > R.kopra.biayaBulananMin) && !profil.kopra) {
+    const a = [];
+    if (profil.supplier >= R.kopra.supplierMin) a.push(`Klinik membayar ${fmtAngka.format(profil.supplier)} supplier aktif — pembayaran massal bisa diotomasi.`);
+    if (r.avgBiaya > R.kopra.biayaBulananMin) a.push(`Total pembayaran rata-rata ${rp(r.avgBiaya)}/bulan (di atas ${rpSingkat(R.kopra.biayaBulananMin)}).`);
+    a.push("Kopra memudahkan kontrol pembayaran sewa, supplier obat & gaji dari satu dashboard, dengan otorisasi berjenjang.");
+    out.push({ produk: "Kopra (Cash Management)", kategori: "Transaksi / Cash Management", prioritas: R.kopra.prioritas, potensi: r.avgBiaya,
+      jenisPotensi: "Arus pembayaran per bulan via Mandiri", alasan: a });
+  }
+  {
+    const K = R.kmk;
+    const pAsuransi = r.porsi.asuransi > K.porsiAsuransiMin && r.hariPiutang > K.hariPencairanMin;
+    if (K.aktif && (r.buffer < K.bufferDibawah || r.st.stabilitas === "merah" || pAsuransi)) {
+      const a = [];
+      if (r.buffer < K.bufferDibawah) a.push(`Buffer kas hanya ${desimal(r.buffer)} bulan (di bawah ${desimal(K.bufferDibawah)} bulan).`);
+      if (r.st.stabilitas === "merah") a.push(`Omzet sangat musiman (variasi ${pct(r.cv)}); modal kerja menjaga operasional di bulan sepi seperti ${labelBulanPanjang(r.bulanMin.bulan)}.`);
+      if (pAsuransi) a.push(`${pct(r.porsi.asuransi)} pendapatan dari asuransi/korporat dengan pencairan ${fmtAngka.format(r.hariPiutang)} hari — kas tertahan di piutang.`);
+      const min = K.plafonMinKali * r.avgBiaya, maks = K.plafonMaksKali * r.avgBiaya;
+      out.push({ produk: "Kredit Modal Kerja (KMK)", kategori: "Kredit", prioritas: r.st.buffer === "merah" ? K.prioritasJikaKasMerah : K.prioritas,
+        potensi: CONFIG.kmkUntukTotal === "maks" ? maks : min, potensiTeks: `${rpSingkat(min)} – ${rpSingkat(maks)}`,
+        jenisPotensi: "Plafon indikatif", catatan: "Indikatif, perlu analisa kredit", alasan: a });
+    }
+  }
+  if (R.investasi.aktif && (profil.rencanaCabang || profil.rencanaAlat)) {
+    const rencana = [profil.rencanaCabang && "membuka cabang baru", profil.rencanaAlat && "membeli alat medis"].filter(Boolean).join(" dan ");
+    const a = [`Klinik berencana ${rencana}${profil.nilaiEkspansi ? " dengan estimasi nilai " + rp(profil.nilaiEkspansi) : ""}.`,
+               "Pembiayaan investasi menjaga kas operasional tetap aman, tidak tersedot untuk belanja modal."];
+    if (r.st.margin !== "hijau" || r.st.buffer === "merah") a.push("Catatan: margin/buffer kas belum ideal — struktur & tenor kredit perlu disesuaikan.");
+    out.push({ produk: "Kredit Investasi", kategori: "Kredit", prioritas: R.investasi.prioritas, potensi: profil.nilaiEkspansi || 0,
+      jenisPotensi: "Nilai pembiayaan", catatan: profil.nilaiEkspansi ? "Indikatif, perlu analisa kredit" : "Nilai ekspansi belum diisi di sheet Profil", alasan: a });
+  }
+  if (R.giro.aktif && r.buffer > R.giro.bufferDiatas) {
+    const lebih = r.saldoAkhir - R.giro.sisakanBulan * r.avgBiaya;
+    if (lebih > 0) out.push({ produk: "Giro / Deposito (Optimalisasi Dana)", kategori: "Dana", prioritas: R.giro.prioritas, potensi: lebih,
+      jenisPotensi: "Dana yang bisa ditempatkan",
+      alasan: [`Saldo kas ${rp(r.saldoAkhir)} setara ${desimal(r.buffer)} bulan biaya — di atas kebutuhan ${R.giro.sisakanBulan} bulan.`,
+               `Kelebihan ${rp(lebih)} bisa ditempatkan di deposito/giro Mandiri agar menghasilkan imbal hasil lebih optimal.`] });
+  }
+
+  const urut = { Tinggi: 0, Sedang: 1, Rendah: 2 };
+  out.sort((a, b) => (urut[a.prioritas] ?? 3) - (urut[b.prioritas] ?? 3) || b.potensi - a.potensi);
+  return out;
+}
+
+/* ---------- Tampilan ---------- */
+const charts = {};
+const $ = id => document.getElementById(id);
+
+function tampilkan({ profil, data }, r) {
+  $("namaKlinik").textContent = profil.nama || "Klinik";
+  $("periodeData").textContent = `${labelBulanPanjang(data[0].bulan)} – ${labelBulanPanjang(data[data.length - 1].bulan)} · ${data.length} bulan`;
+  const yt = b => ({ yn: b ? "ya" : "tidak", t: b ? "Ya" : "Tidak" });
+  const isian = [
+    ["Lokasi (Mall)", profil.lokasi || "-"], ["Jenis Layanan", profil.jenis || "-"],
+    ["Tahun Berdiri", profil.tahun ? String(profil.tahun) : "-"], ["Jumlah Cabang", fmtAngka.format(profil.cabang)],
+    ["Jumlah Karyawan", fmtAngka.format(profil.karyawan)], ["Tanggal Gajian", profil.gajian ? "Tanggal " + profil.gajian : "-"],
+    ["Bank Utama", profil.bank || "-"], ["Supplier Aktif", fmtAngka.format(profil.supplier)],
+    ["EDC Mandiri", yt(profil.edc)], ["QRIS Mandiri", yt(profil.qris)],
+    ["Payroll Mandiri", yt(profil.payroll)], ["Kopra", yt(profil.kopra)],
+    ["Pencairan Piutang Asuransi", fmtAngka.format(profil.hariPiutang) + " hari"], ["Rencana Buka Cabang", yt(profil.rencanaCabang)],
+    ["Rencana Beli Alat Medis", yt(profil.rencanaAlat)], ["Nilai Ekspansi/Alat", profil.nilaiEkspansi ? rp(profil.nilaiEkspansi) : "-"]
+  ];
+  $("profilGrid").innerHTML = isian.map(([k, v]) => `<div class="f"><div class="k">${esc(k)}</div><div class="v">${
+    typeof v === "object" ? `<span class="yn ${v.yn}">${v.t}</span>` : esc(v)}</div></div>`).join("");
+
+  // Skor
+  $("skorBox").className = "panel skor-box " + r.warnaSkor;
+  $("skorAngka").textContent = r.skor;
+  $("skorLabel").textContent = r.labelSkor;
+  $("skorPin").style.left = Math.max(0, Math.min(100, r.skor)) + "%";
+  const hitung = s => r.ind.filter(i => i.status === s).length;
+  $("skorHitung").innerHTML = ["hijau", "kuning", "merah"].map(s => `<span class="tag ${s}">${hitung(s)} ${LABEL_STATUS[s]}</span>`).join("");
+  const totalPot = sum(r.rek.map(x => x.potensi));
+  $("ringkas").innerHTML = [
+    ["Rata-rata omzet per bulan", rp(r.avgOmzet)],
+    ["Rata-rata total biaya per bulan", rp(r.avgBiaya)],
+    ["Rata-rata surplus kas per bulan", rp(r.avgOmzet - r.avgBiaya)],
+    ["Saldo kas terakhir", rp(r.saldoAkhir)],
+    ["Rata-rata pasien per bulan", fmtAngka.format(avg(data.map(d => d.pasien))) + " orang"],
+    ["Total estimasi potensi bisnis", rp(totalPot), "potensi"]
+  ].map(([k, v, c]) => `<tr class="${c || ""}"><td>${k}</td><td>${v}</td></tr>`).join("");
+
+  // Indikator
+  $("indGrid").innerHTML = r.ind.map(i => `
+    <div class="ind ${i.status}">
+      <div class="row1"><span class="judul">${i.judul}</span><span class="tag ${i.status}">${LABEL_STATUS[i.status]}</span></div>
+      <div class="nilai">${i.nilai}</div>
+      <div class="ket">${esc(i.ket)}</div>
+    </div>`).join("");
+
+  // Insight
+  $("insightList").innerHTML = r.insights.map(x => `<li><span>${esc(x.teks)}</span><span class="tag ${x.status}">${LABEL_STATUS[x.status]}</span></li>`).join("");
+
+  // Rekomendasi
+  $("totalPotensi").textContent = rp(totalPot);
+  $("totalKet").textContent = r.rek.length
+    ? `Gabungan ${r.rek.length} peluang produk (volume transaksi, dana, dan kredit). Angka ini estimasi untuk memetakan prioritas, bukan target pasti.`
+    : "Belum ada produk yang memenuhi aturan rekomendasi untuk klinik ini.";
+  $("rekGrid").innerHTML = r.rek.length ? r.rek.map((x, n) => `
+    <div class="rek">
+      <div class="top">
+        <div><div class="urut">${String(n + 1).padStart(2, "0")} · ${esc(x.kategori)}</div><div class="nama">${esc(x.produk)}</div></div>
+        <span class="prio ${esc(x.prioritas)}">Prioritas ${esc(x.prioritas)}</span>
+      </div>
+      <ul>${x.alasan.map(a => `<li>${a}</li>`).join("")}</ul>
+      <div class="pot">
+        <span class="k">${esc(x.jenisPotensi)}</span>
+        <span class="v">${x.potensiTeks ? esc(x.potensiTeks) : rp(x.potensi)}</span>
+        ${x.catatan ? `<span class="note">${esc(x.catatan)}</span>` : ""}
+      </div>
+    </div>`).join("") : `<div class="panel muted">Tidak ada rekomendasi. Klinik kemungkinan sudah memakai produk Mandiri yang relevan, jadi fokus pada pendalaman hubungan.</div>`;
+
+  gambarGrafik(data, r);
+}
+
+function gambarGrafik(data, r) {
+  Object.values(charts).forEach(c => c.destroy());
+  const labels = data.map(d => labelBulan(d.bulan));
+  const tick = { callback: v => rpSingkat(v), color: "#7a828c", font: { size: 11 } };
+  const grid = { color: "#ebece8" };
+  const xAxis = { grid: { display: false }, ticks: { color: "#7a828c", font: { size: 11 } }, border: { color: "#d9dbd6" } };
+  const tip = { backgroundColor: "#1b1f24", cornerRadius: 3, padding: 10, callbacks: { label: c => ` ${c.dataset.label || c.label}: ${rp(c.parsed.y ?? c.parsed)}` } };
+  Chart.defaults.font.family = '"Plus Jakarta Sans", "Segoe UI", Roboto, Arial, sans-serif';
+  Chart.defaults.color = "#4a525c";
+
+  charts.omzet = new Chart($("chOmzet"), {
+    type: "line",
+    data: { labels, datasets: [
+      { label: "Omzet", data: data.map(d => d.omzet), borderColor: WARNA_UTAMA, backgroundColor: WARNA_UTAMA, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5, tension: 0 },
+      { label: "Total Biaya", data: data.map(d => d.biaya), borderColor: WARNA[1], backgroundColor: WARNA[1], borderWidth: 2, pointRadius: 3, pointHoverRadius: 5, tension: 0 }
+    ] },
+    options: { maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+      plugins: { legend: { position: "top", align: "start", labels: { boxWidth: 12, boxHeight: 2, font: { size: 12 } } }, tooltip: tip },
+      scales: { y: { ticks: tick, grid, border: { display: false } }, x: xAxis } }
+  });
+
+  charts.saldo = new Chart($("chSaldo"), {
+    type: "bar",
+    data: { labels, datasets: [{ label: "Saldo Kas", data: data.map(d => d.saldo),
+      backgroundColor: data.map(d => d.saldo < r.avgBiaya * CONFIG.indikator.buffer.merahJikaDibawah ? "#c94a43" : WARNA_UTAMA),
+      borderRadius: { topLeft: 3, topRight: 3 }, maxBarThickness: 30 }] },
+    options: { maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: tip },
+      scales: { y: { ticks: tick, grid, beginAtZero: true, border: { display: false } }, x: xAxis } }
+  });
+
+  const donut = (id, lgId, items) => {
+    const total = sum(items.map(i => i.v));
+    $(lgId).innerHTML = items.map((i, k) => `<tr><td><span class="sw" style="background:${WARNA[k]}"></span>${esc(i.l)}</td><td class="n">${rpSingkat(i.v)}</td><td class="p">${total ? pct(i.v / total) : "0%"}</td></tr>`).join("");
+    return new Chart($(id), {
+      type: "doughnut",
+      data: { labels: items.map(i => i.l), datasets: [{ data: items.map(i => i.v), backgroundColor: WARNA.slice(0, items.length), borderColor: "#fff", borderWidth: 2 }] },
+      options: { maintainAspectRatio: false, cutout: "60%",
+        plugins: { legend: { display: false },
+          tooltip: { callbacks: { label: c => ` ${c.label}: ${rp(c.parsed)} (${total ? pct(c.parsed / total) : "0%"})` } } } }
+    });
+  };
+  const namaPendek = { sewa: "Sewa & Service Charge", gaji: "Gaji", obat: "Obat & Bahan Medis", retail: "Produk Retail", utilitas: "Utilitas", marketing: "Marketing", lain: "Lain-lain", cicilan: "Cicilan Pinjaman",
+    tunai: "Tunai", kartu: "Kartu (EDC)", qris: "QRIS", transfer: "Transfer", asuransi: "Asuransi/Korporat" };
+  charts.biaya = donut("chBiaya", "lgBiaya", KOL_BIAYA.map(c => ({ l: namaPendek[c.key], v: r.tot(c.key) })));
+  charts.mix = donut("chMix", "lgMix", KOL_PENDAPATAN.map(c => ({ l: namaPendek[c.key], v: r.tot(c.key) })));
+}
+
+/* ---------- Alur utama ---------- */
+function tampilError(list) {
+  const box = $("errorBox");
+  box.innerHTML = `<b>File belum bisa dianalisa. Mohon periksa:</b><ul>${list.map(e => `<li>${e}</li>`).join("")}</ul>`;
+  box.classList.remove("hidden");
+  $("hasil").classList.add("hidden");
+}
+
+function prosesWorkbook(wb) {
+  $("errorBox").classList.add("hidden");
+  try {
+    const hasil = bacaWorkbook(wb);
+    const r = analisa(hasil);
+    $("hasil").classList.remove("hidden");
+    tampilkan(hasil, r);
+    $("sec-profil").scrollIntoView({ behavior: "smooth" });
+  } catch (e) {
+    if (e instanceof ValidasiError) tampilError(e.list);
+    else { console.error(e); tampilError(["Terjadi kesalahan saat membaca file: " + esc(e.message) + ". Pastikan file mengikuti template."]); }
+  }
+}
+
+function prosesFile(file) {
+  if (!file) return;
+  if (!/\.xlsx?$/i.test(file.name)) { tampilError([`File "${esc(file.name)}" bukan file Excel. Gunakan file berakhiran <b>.xlsx</b>.`]); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try { prosesWorkbook(XLSX.read(new Uint8Array(e.target.result), { type: "array", cellDates: true })); }
+    catch (err) { tampilError(["File tidak bisa dibuka sebagai Excel. Pastikan file tidak rusak atau terkunci password."]); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* ---------- Template & data contoh ---------- */
+function buatWorkbook(profilIsi, barisBulanan) {
+  const wb = XLSX.utils.book_new();
+  const p = [["Field", "Isian", "Keterangan"], ...PROFIL_FIELDS.map(f => [f.label, profilIsi ? profilIsi[f.key] : "", "Contoh: " + f.contoh])];
+  const shP = XLSX.utils.aoa_to_sheet(p);
+  shP["!cols"] = [{ wch: 50 }, { wch: 28 }, { wch: 44 }];
+  XLSX.utils.book_append_sheet(wb, shP, "Profil");
+
+  const b = [BULANAN_COLS.map(c => c.label), ...barisBulanan.map(row => BULANAN_COLS.map(c => row[c.key]))];
+  const shB = XLSX.utils.aoa_to_sheet(b);
+  shB["!cols"] = BULANAN_COLS.map(c => ({ wch: Math.max(14, c.label.length + 2) }));
+  XLSX.utils.book_append_sheet(wb, shB, "Bulanan");
+
+  const contoh = { bulan: "2025-01", pasien: 620, tunai: 95000000, kartu: 150000000, qris: 20000000, transfer: 30000000, asuransi: 115000000,
+    sewa: 82000000, gaji: 118000000, obat: 70000000, retail: 24000000, utilitas: 9000000, marketing: 15000000, lain: 8000000, cicilan: 25000000, saldo: 410000000 };
+  const pt = [
+    ["PETUNJUK PENGISIAN — Clinic Cash Flow Check-Up"], [],
+    ["1. Sheet \"Profil\": isi kolom B (Isian) untuk setiap baris. Jangan ubah teks di kolom A."],
+    ["   - Untuk pertanyaan Ya/Tidak, tulis Ya atau Tidak."],
+    ["   - Tanggal Gajian diisi angka 1–31. Hari pencairan piutang diisi angka (hari)."],
+    ["2. Sheet \"Bulanan\": satu baris untuk satu bulan. Minimal 6 bulan, ideal 12 bulan terakhir."],
+    ["   - Kolom Bulan ditulis dengan format YYYY-MM, contoh 2025-01 untuk Januari 2025."],
+    ["   - Semua nilai uang ditulis dalam Rupiah penuh tanpa titik/koma, contoh 125000000."],
+    ["   - Jika tidak ada, isi 0. Jangan ubah atau menghapus judul kolom."],
+    ["3. Omzet = Tunai + Kartu (EDC) + QRIS + Transfer + Asuransi/Korporat."],
+    ["4. Total Biaya = semua kolom biaya + Cicilan Pinjaman."],
+    ["5. Simpan file (.xlsx), lalu upload di aplikasi."], [],
+    ["CONTOH SATU BARIS (sheet Bulanan):"],
+    BULANAN_COLS.map(c => c.label),
+    BULANAN_COLS.map(c => contoh[c.key])
+  ];
+  const shT = XLSX.utils.aoa_to_sheet(pt);
+  shT["!cols"] = [{ wch: 14 }, ...BULANAN_COLS.slice(1).map(() => ({ wch: 16 }))];
+  XLSX.utils.book_append_sheet(wb, shT, "Petunjuk");
+  return wb;
+}
+
+function dataContoh() {
+  const profil = { nama: "Klinik Aura Estetika", lokasi: "Mall Kota Kasablanka", jenis: "Estetika", tahun: 2019, cabang: 2, karyawan: 18, gajian: 25,
+    bank: "Bank X", edc: "Tidak", qris: "Tidak", payroll: "Tidak", kopra: "Tidak", hariPiutang: 45, rencanaCabang: "Tidak", rencanaAlat: "Ya",
+    nilaiEkspansi: 850000000, supplier: 9 };
+  const faktor = [1.00, 1.02, 1.05, 1.12, 1.10, 0.98, 0.93, 1.08, 1.00, 0.96, 0.92, 0.90];
+  const bulan = ["2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08"];
+  const bulat = x => Math.round(x / 1000) * 1000;
+  let saldo = 280000000;
+  const rows = bulan.map((b, i) => {
+    const om = 420000000 * faktor[i];
+    const row = { bulan: b, pasien: Math.round(om / 650000),
+      tunai: bulat(om * .24), kartu: bulat(om * .36), qris: bulat(om * .04), transfer: bulat(om * .08), asuransi: bulat(om * .28),
+      sewa: 82000000, gaji: 118000000, obat: bulat(om * .17), retail: bulat(om * .06), utilitas: bulat(8500000 + 1000000 * (i % 3)),
+      marketing: bulat(15000000 * (i % 4 === 0 ? 1.4 : 1)), lain: 8000000, cicilan: 25000000 };
+    const masuk = row.tunai + row.kartu + row.qris + row.transfer + row.asuransi;
+    const keluar = row.sewa + row.gaji + row.obat + row.retail + row.utilitas + row.marketing + row.lain + row.cicilan;
+    saldo = saldo + masuk - keluar - 50000000;   // prive/dividen pemilik
+    row.saldo = bulat(saldo);
+    return row;
+  });
+  return buatWorkbook(profil, rows);
+}
+
+/* ---------- Event ---------- */
+function perluLibrary() {
+  if (typeof XLSX === "undefined" || typeof Chart === "undefined") {
+    tampilError(["Komponen aplikasi belum termuat. Pastikan laptop/tablet <b>terhubung ke internet</b> saat membuka file ini, lalu refresh halaman (tekan F5)."]);
+    return false;
+  }
+  return true;
+}
+const dz = $("dropzone"), fi = $("fileInput");
+dz.addEventListener("click", () => fi.click());
+dz.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fi.click(); } });
+fi.addEventListener("change", () => { if (perluLibrary()) prosesFile(fi.files[0]); fi.value = ""; });
+["dragenter", "dragover"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add("drag"); }));
+["dragleave", "drop"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove("drag"); }));
+dz.addEventListener("drop", e => { if (perluLibrary()) prosesFile(e.dataTransfer.files[0]); });
+window.addEventListener("dragover", e => e.preventDefault());
+window.addEventListener("drop", e => e.preventDefault());
+
+$("btnTemplate").addEventListener("click", () => { if (perluLibrary()) XLSX.writeFile(buatWorkbook(null, []), "Template_Clinic_CashFlow_CheckUp.xlsx"); });
+$("btnContoh").addEventListener("click", () => {
+  if (!perluLibrary()) return;
+  // Diproses lewat jalur yang sama seperti file upload (tulis → baca ulang)
+  const buf = XLSX.write(dataContoh(), { type: "array", bookType: "xlsx" });
+  prosesWorkbook(XLSX.read(buf, { type: "array", cellDates: true }));
+});
+$("btnUnduhContoh").addEventListener("click", () => { if (perluLibrary()) XLSX.writeFile(dataContoh(), "Contoh_Data_Klinik.xlsx"); });
+$("btnUlang").addEventListener("click", () => {
+  $("hasil").classList.add("hidden");
+  $("catatan").value = ""; $("catatanPrint").textContent = "";
+  $("sec-upload").scrollIntoView({ behavior: "smooth" });
+});
+$("catatan").addEventListener("input", e => $("catatanPrint").textContent = e.target.value);
+
+// Cetak: grafik diubah jadi gambar agar rapi di PDF
+function siapCetak() {
+  $("catatanPrint").textContent = $("catatan").value || "(tidak ada catatan)";
+  $("tglCetak").textContent = "Dicetak: " + new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+  Object.values(charts).forEach(c => {
+    const img = c.canvas.parentElement.querySelector("img.print-img");
+    if (img) img.src = c.toBase64Image();
+  });
+}
+window.addEventListener("beforeprint", siapCetak);
+$("btnCetak").addEventListener("click", () => { siapCetak(); setTimeout(() => window.print(), 250); });
+</script>
+</body>
+</html>
